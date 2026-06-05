@@ -1274,7 +1274,7 @@ export default function DashboardPage() {
 
       <TopNavbar />
 
-      <div className="sticky top-14 z-30 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur sm:top-16 lg:hidden">
+      <div className="sticky top-14 z-30 border-b border-border/60 bg-background px-3 py-2 sm:top-16 lg:hidden">
         <MobileDriveNav
           currentView={currentView}
           expiredRentCount={expiredRentCount}

@@ -58,6 +58,11 @@ body {
   min-height: 100vh;
 }
 
+.mobile-drive-menu-overlay {
+  background-color: hsl(222, 47%, 6%);
+  isolation: isolate;
+}
+
 @keyframes share-received-blink {
   0%,
   100% {

@@ -35,6 +35,7 @@ type DriveNavListProps = {
   onNavigate?: () => void;
   className?: string;
   itemClassName?: string;
+  variant?: "sidebar" | "drawer";
 };
 
 export function DriveNavList({
@@ -44,6 +45,7 @@ export function DriveNavList({
   onNavigate,
   className,
   itemClassName,
+  variant = "sidebar",
 }: DriveNavListProps) {
   const items = buildDriveNavItems(expiredRentCount);
 
@@ -62,10 +64,20 @@ export function DriveNavList({
               onNavigate?.();
             }}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
-              isActive
-                ? "bg-primary/20 text-primary"
-                : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+              "flex w-full items-center gap-3 text-left text-sm transition-colors",
+              variant === "drawer"
+                ? cn(
+                    "rounded-xl border px-4 py-3.5",
+                    isActive
+                      ? "border-sky-400/55 bg-sky-500/10 text-foreground"
+                      : "border-[hsl(223,22%,22%)] bg-[hsl(222,29%,10%)] text-muted-foreground hover:border-sky-400/35 hover:text-foreground",
+                  )
+                : cn(
+                    "rounded-lg px-3 py-2.5",
+                    isActive
+                      ? "bg-primary/20 text-primary"
+                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                  ),
               itemClassName,
             )}
           >
