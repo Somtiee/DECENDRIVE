@@ -1,0 +1,51 @@
+{
+  "name": "decendrive",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "publish:contract": "node scripts/publish-contract.mjs",
+    "upgrade:contract": "node scripts/upgrade-contract.mjs"
+  },
+  "dependencies": {
+    "@cetusprotocol/aggregator-sdk": "^1.5.5",
+    "@mysten/dapp-kit": "latest",
+    "@mysten/seal": "latest",
+    "@mysten/sui": "latest",
+    "@mysten/walrus": "latest",
+    "@radix-ui/react-progress": "latest",
+    "@radix-ui/react-separator": "latest",
+    "@radix-ui/react-slot": "latest",
+    "@tanstack/react-query": "latest",
+    "@tatumio/tatum": "latest",
+    "class-variance-authority": "latest",
+    "clsx": "latest",
+    "date-fns": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "sonner": "latest",
+    "tailwind-merge": "latest",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "latest",
+    "prettier": "latest",
+    "prettier-plugin-tailwindcss": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  }
+}
