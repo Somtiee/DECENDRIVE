@@ -42,12 +42,12 @@ export function DriveSearchBox() {
   const showDropdown = open && query.trim().length > 0;
 
   return (
-    <div ref={rootRef} className="relative ml-0 w-full max-w-xl md:ml-4">
-      <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div ref={rootRef} className="relative w-full min-w-0 md:max-w-xl">
+      <Search className="pointer-events-none absolute top-1/2 left-2.5 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground sm:left-3 sm:h-4 sm:w-4" />
       <Input
         type="search"
-        placeholder="Search files, blobs, wallets…"
-        className="h-9 pr-9 pl-9 text-sm sm:h-10"
+        placeholder="Search files…"
+        className="h-8 min-w-0 pr-8 pl-8 text-xs sm:h-10 sm:pr-9 sm:pl-9 sm:text-sm"
         aria-label="Search in Drive"
         aria-expanded={showDropdown}
         aria-controls="drive-search-results"

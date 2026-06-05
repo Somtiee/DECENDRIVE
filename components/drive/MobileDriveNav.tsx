@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Menu, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DriveNavList, buildDriveNavItems, type DriveView } from "@/components/drive/sidebar";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ export function MobileDriveNav({
   onViewChange,
 }: MobileDriveNavProps) {
   const [open, setOpen] = useState(false);
+  const [panelTop, setPanelTop] = useState(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const items = useMemo(() => buildDriveNavItems(expiredRentCount), [expiredRentCount]);
   const activeItem = items.find((item) => item.view === currentView);
   const ActiveIcon = activeItem?.icon ?? Menu;
@@ -34,19 +36,39 @@ export function MobileDriveNav({
   }, [open]);
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const updatePanelTop = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setPanelTop(rect.bottom + 8);
+      }
+    };
+    updatePanelTop();
+    window.addEventListener("resize", updatePanelTop);
+    window.addEventListener("scroll", updatePanelTop, true);
+    return () => {
+      window.removeEventListener("resize", updatePanelTop);
+      window.removeEventListener("scroll", updatePanelTop, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
     setOpen(false);
   }, [currentView]);
 
   return (
     <div className="relative lg:hidden">
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={open}
         aria-controls="mobile-drive-nav-panel"
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-card/60 px-3 py-2.5 text-left transition hover:border-sky-400/35 hover:bg-card/80"
+        className="flex w-full items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left transition hover:border-sky-400/35 hover:bg-card/90"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background/70">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-background">
           {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </span>
         <span className="min-w-0 flex-1">
@@ -74,19 +96,20 @@ export function MobileDriveNav({
           <button
             type="button"
             aria-label="Close navigation menu"
-            className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[1px]"
+            className="fixed inset-0 z-[120] bg-black/70"
             onClick={() => setOpen(false)}
           />
           <div
             id="mobile-drive-nav-panel"
-            className="absolute top-[calc(100%+0.5rem)] right-0 left-0 z-50 overflow-hidden rounded-xl border border-border/70 bg-card/95 shadow-2xl backdrop-blur-md"
+            className="fixed right-3 left-3 z-[130] overflow-hidden rounded-xl border border-border bg-background shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
+            style={{ top: panelTop }}
           >
-            <div className="border-b border-border/60 px-4 py-3">
+            <div className="border-b border-border px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Drive sections
               </p>
             </div>
-            <div className="p-2">
+            <div className="bg-background p-2">
               <DriveNavList
                 currentView={currentView}
                 expiredRentCount={expiredRentCount}

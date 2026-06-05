@@ -30,21 +30,21 @@ export function WalletConnectButton() {
 
   if (!account) {
     return (
-      <div className="flex shrink-0 items-center gap-2">
-        <ConnectButton connectText="Connect Wallet" />
+      <div className="flex shrink-0 items-center">
+        <ConnectButton connectText="Connect" />
       </div>
     );
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
       <button
         type="button"
         onClick={() => void copyAddress()}
         disabled={copying}
         title="Tap to copy full wallet address"
         aria-label={`Copy wallet address ${account.address}`}
-        className="group inline-flex max-w-[9.5rem] items-center gap-1.5 rounded-md border border-border bg-secondary/80 px-2.5 py-2 text-xs font-medium text-foreground transition hover:border-sky-400/50 hover:bg-sky-500/10 sm:max-w-none sm:px-3"
+        className="group inline-flex max-w-[5.75rem] items-center gap-1 rounded-md border border-border bg-secondary/80 px-1.5 py-1.5 text-[10px] font-medium text-foreground transition hover:border-sky-400/50 hover:bg-sky-500/10 sm:max-w-none sm:gap-1.5 sm:px-2.5 sm:py-2 sm:text-xs md:px-3"
       >
         <Copy className="h-3 w-3 shrink-0 text-muted-foreground transition group-hover:text-sky-300" aria-hidden />
         <span className="truncate">{shortenAddress(account.address)}</span>
@@ -53,12 +53,12 @@ export function WalletConnectButton() {
         type="button"
         variant="outline"
         size="sm"
-        className="h-9 px-2 sm:px-3"
+        className="h-8 shrink-0 px-2 sm:h-9 sm:px-3"
         onClick={() => disconnect()}
         disabled={isPending}
         aria-label="Disconnect wallet"
       >
-        <LogOut className="h-4 w-4 sm:mr-2" />
+        <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
         <span className="hidden sm:inline">Disconnect</span>
       </Button>
     </div>
