@@ -238,7 +238,7 @@ function InviteRow({
           </span>
         ),
       });
-      await onRefresh({ bustCache: true, action: "accepted", invite });
+      void onRefresh({ bustCache: true, action: "accepted", invite });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Accept failed.";
       toast.error(message);
@@ -263,7 +263,7 @@ function InviteRow({
         invite.objectId,
       );
       toast.success("Invitation declined.");
-      await onRefresh({ bustCache: true, action: "declined", invite });
+      void onRefresh({ bustCache: true, action: "declined", invite });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Decline failed.";
       toast.error(message);
@@ -471,7 +471,12 @@ export function ReceivedPanel({
   const address = account?.address;
   const queryClient = useQueryClient();
   const bustCacheRef = useRef(false);
+  const initialLiveSyncRef = useRef(true);
   const panelCacheKey = address ? `received:${address}` : null;
+
+  if (!address) {
+    initialLiveSyncRef.current = true;
+  }
   const queryKey = ["received-invitations", address, pendingPage, receivedPage, pageSize] as const;
 
   const cachedSnapshot = useMemo(() => {
@@ -484,17 +489,22 @@ export function ReceivedPanel({
   const query = useQuery({
     queryKey,
     enabled: Boolean(address),
-    staleTime: 45_000,
+    staleTime: 8_000,
     gcTime: 30 * 60_000,
     retry: 2,
-    retryDelay: (attempt) => Math.min(6000, 1500 * 2 ** attempt),
-    refetchOnWindowFocus: false,
+    retryDelay: (attempt) => Math.min(4000, 1000 * 2 ** attempt),
+    refetchOnWindowFocus: true,
+    refetchInterval: () => (typeof document !== "undefined" && document.hidden ? false : 10_000),
     placeholderData: keepPreviousData,
     initialData: cachedSnapshot as ReceivedQueryData | undefined,
-    initialDataUpdatedAt: cachedSnapshot ? Date.now() - 30_000 : undefined,
+    initialDataUpdatedAt: cachedSnapshot ? Date.now() - 8_000 : undefined,
     queryFn: async () => {
-      const refreshParam = bustCacheRef.current ? "&refresh=1" : "";
+      const shouldRefresh = bustCacheRef.current || initialLiveSyncRef.current;
+      if (initialLiveSyncRef.current) {
+        initialLiveSyncRef.current = false;
+      }
       bustCacheRef.current = false;
+      const refreshParam = shouldRefresh ? "&refresh=1" : "";
       const response = await fetch(
         `/api/files/received?recipient=${encodeURIComponent(address ?? "")}&pendingPage=${pendingPage}&receivedPage=${receivedPage}&pageSize=${pageSize}${refreshParam}`,
         { cache: "no-store" },
@@ -526,6 +536,15 @@ export function ReceivedPanel({
     },
   });
 
+  const scheduleBackgroundSync = (delaysMs: number[]) => {
+    for (const delayMs of delaysMs) {
+      window.setTimeout(() => {
+        bustCacheRef.current = true;
+        void query.refetch();
+      }, delayMs);
+    }
+  };
+
   const refresh = async (options: ReceivedRefreshOptions = {}) => {
     const { bustCache = false, action, invite } = options;
 
@@ -540,6 +559,11 @@ export function ReceivedPanel({
       if (optimistic && panelCacheKey) {
         writeReceivedPanelCache(panelCacheKey, optimistic);
       }
+      onAccepted?.();
+      bustCacheRef.current = true;
+      scheduleBackgroundSync([1200, 4000, 9000]);
+      void query.refetch();
+      return;
     }
 
     if (bustCache) {

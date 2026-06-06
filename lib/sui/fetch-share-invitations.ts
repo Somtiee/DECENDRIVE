@@ -64,17 +64,26 @@ function parseInvitationRow(
   };
 }
 
+type OwnedObjectsQuery = {
+  cursor?: string | null;
+  filter?: { StructType: string };
+};
+
 async function loadOwnedInvitationsPage(
   owner: string,
-  cursor: string | null | undefined,
+  query: OwnedObjectsQuery,
   useRpc: boolean,
 ): Promise<OwnedObjectsPage> {
+  const request = {
+    cursor: query.cursor,
+    filter: query.filter,
+    options: { showContent: true, showType: true },
+    limit: OWNED_PAGE_SIZE,
+  };
+
   if (useRpc) {
     return (
-      (await suiJsonRpc<OwnedObjectsPage>("suix_getOwnedObjects", [
-        owner,
-        { cursor, options: { showContent: true, showType: true }, limit: OWNED_PAGE_SIZE },
-      ])) ?? { data: [] }
+      (await suiJsonRpc<OwnedObjectsPage>("suix_getOwnedObjects", [owner, request])) ?? { data: [] }
     );
   }
 
@@ -82,7 +91,8 @@ async function loadOwnedInvitationsPage(
   const client = getSuiClient();
   const batch = await client.getOwnedObjects({
     owner,
-    cursor,
+    cursor: query.cursor,
+    filter: query.filter,
     options: { showContent: true, showType: true },
     limit: OWNED_PAGE_SIZE,
   });
@@ -91,6 +101,55 @@ async function loadOwnedInvitationsPage(
     hasNextPage: batch.hasNextPage,
     nextCursor: batch.nextCursor ?? null,
   };
+}
+
+/** Direct StructType query — finds all ShareInvitation objects without scanning unrelated wallet clutter. */
+async function loadOwnedInvitationsByStructType(
+  owner: string,
+  packageIds: string[],
+): Promise<ShareInvitationRecord[]> {
+  const invitations: ShareInvitationRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const packageId of packageIds) {
+    const structType = `${packageId}::decendrive::ShareInvitation`;
+    let cursor: string | null | undefined = null;
+
+    for (let useRpc = 0; useRpc < 2; useRpc += 1) {
+      cursor = null;
+      let foundPage = false;
+
+      try {
+        for (let page = 0; page < 12; page += 1) {
+          const batch = await loadOwnedInvitationsPage(
+            owner,
+            { cursor, filter: { StructType: structType } },
+            useRpc === 1,
+          );
+          foundPage = true;
+          for (const row of batch.data ?? []) {
+            const parsed = parseInvitationRow(row, owner);
+            if (!parsed || seen.has(parsed.invite.objectId)) {
+              continue;
+            }
+            seen.add(parsed.invite.objectId);
+            invitations.push(parsed.invite);
+          }
+          if (!batch.hasNextPage || !batch.nextCursor) {
+            break;
+          }
+          cursor = batch.nextCursor;
+        }
+        if (foundPage) {
+          break;
+        }
+      } catch {
+        // Retry via resilient JSON-RPC on the next pass.
+      }
+    }
+  }
+
+  return invitations;
 }
 
 /** Limited wallet scan — matches ShareInvitation from any DecenDrive package publish. */
@@ -111,7 +170,7 @@ async function loadOwnedInvitations(owner: string): Promise<{
 
     try {
       for (let page = 0; page < MAX_OWNED_SCAN_PAGES; page += 1) {
-        const batch = await loadOwnedInvitationsPage(owner, cursor, useRpc === 1);
+        const batch = await loadOwnedInvitationsPage(owner, { cursor }, useRpc === 1);
         for (const row of batch.data ?? []) {
           const parsed = parseInvitationRow(row, owner);
           if (!parsed || seen.has(parsed.invite.objectId)) {
@@ -254,23 +313,37 @@ export async function fetchShareInvitationsForRecipient(
   const seen = new Set<string>();
   const all: ShareInvitationRecord[] = [];
 
-  const owned = await loadOwnedInvitations(recipient);
-  for (const invite of owned.invitations) {
+  const pushUnique = (invite: ShareInvitationRecord) => {
     if (seen.has(invite.objectId)) {
-      continue;
+      return;
     }
     seen.add(invite.objectId);
     all.push(invite);
+  };
+
+  // 1. Newest shares via on-chain events (fast path right after sender shares).
+  const fromEvents = await loadInvitationsFromShareSentEvents(recipient, configuredIds);
+  for (const invite of fromEvents) {
+    pushUnique(invite);
   }
 
-  const eventPackageIds = [...new Set([...configuredIds, ...owned.packageIds])];
-  const fromEvents = await loadInvitationsFromShareSentEvents(recipient, eventPackageIds);
-  for (const invite of fromEvents) {
-    if (seen.has(invite.objectId)) {
-      continue;
+  // 2. Direct StructType wallet query (does not miss invites buried in a busy wallet).
+  const byStructType = await loadOwnedInvitationsByStructType(recipient, configuredIds);
+  for (const invite of byStructType) {
+    pushUnique(invite);
+  }
+
+  // 3. Limited fallback scan for RPCs that ignore StructType filters.
+  if (all.length === 0) {
+    const owned = await loadOwnedInvitations(recipient);
+    const eventPackageIds = [...new Set([...configuredIds, ...owned.packageIds])];
+    const fallbackEvents = await loadInvitationsFromShareSentEvents(recipient, eventPackageIds);
+    for (const invite of fallbackEvents) {
+      pushUnique(invite);
     }
-    seen.add(invite.objectId);
-    all.push(invite);
+    for (const invite of owned.invitations) {
+      pushUnique(invite);
+    }
   }
 
   return all;

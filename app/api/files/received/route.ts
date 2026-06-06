@@ -81,7 +81,7 @@ const emptyPage = (pageSize: number) => ({
 
 
 
-const CACHE_TTL_MS = 45_000;
+const CACHE_TTL_MS = 12_000;
 
 const invitationCache = new Map<
 
@@ -133,6 +133,18 @@ function getCachedEnrichedInvitations(recipient: string) {
 
 
 
+function enrichPendingInvitation(invite: ShareInvitationRecord): ShareInvitationRecord {
+  const permissions =
+    invite.permissions > 0 ? invite.permissions : FULL_SHARE_PERMISSION_FLAGS;
+  return {
+    ...invite,
+    canView: invite.canView || permissions > 0,
+    canDownload: invite.canDownload || (permissions & 2) !== 0,
+    accessRevoked: false,
+    permissions,
+  };
+}
+
 async function enrichInvitations(
 
   invitations: ShareInvitationRecord[],
@@ -141,7 +153,16 @@ async function enrichInvitations(
 
 ): Promise<ShareInvitationRecord[]> {
 
-  const fileObjectIds = invitations
+  const pending = invitations
+    .filter((invite) => invite.status === "pending")
+    .map(enrichPendingInvitation);
+
+  const settled = invitations.filter((invite) => invite.status !== "pending");
+  if (settled.length === 0) {
+    return pending;
+  }
+
+  const fileObjectIds = settled
 
     .map((invite) => invite.fileObjectId)
 
@@ -149,9 +170,9 @@ async function enrichInvitations(
 
   const liveByFileId = await readLiveShareAccessBatch(fileObjectIds, recipient);
 
-  const enriched: ShareInvitationRecord[] = [];
+  const enrichedSettled: ShareInvitationRecord[] = [];
 
-  for (const invite of invitations) {
+  for (const invite of settled) {
 
     const fileObjectId = invite.fileObjectId;
 
@@ -170,7 +191,7 @@ async function enrichInvitations(
 
           : FULL_SHARE_PERMISSION_FLAGS;
 
-      enriched.push({
+      enrichedSettled.push({
 
         ...invite,
 
@@ -200,7 +221,7 @@ async function enrichInvitations(
 
         : FULL_SHARE_PERMISSION_FLAGS;
 
-    enriched.push({
+    enrichedSettled.push({
 
       ...invite,
 
@@ -218,7 +239,7 @@ async function enrichInvitations(
 
   }
 
-  return enriched;
+  return [...pending, ...enrichedSettled];
 
 }
 
