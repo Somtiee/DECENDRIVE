@@ -92,17 +92,18 @@ export function SharedOutPanel({
   const query = useQuery({
     queryKey: ["shared-out", sender, page, pageSize],
     enabled: Boolean(sender),
-    staleTime: 0,
+    staleTime: 8_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: () => (typeof document !== "undefined" && document.hidden ? false : 12_000),
     retry: 2,
     queryFn: async ({ queryKey }) => {
-      const [, querySender, queryPage] = queryKey;
+      const [, querySender, queryPage, queryPageSize] = queryKey;
       const bustCache = queryClient.getQueryData<boolean>(["shared-out-bust", querySender]) ?? false;
       const refreshParam = bustCache ? "&refresh=1" : "";
       const response = await fetch(
-        `/api/files/shared-out?sender=${querySender}&page=${queryPage}&pageSize=10${refreshParam}`,
+        `/api/files/shared-out?sender=${querySender}&page=${queryPage}&pageSize=${queryPageSize}${refreshParam}`,
         { cache: "no-store" },
       );
       const data = (await response.json()) as SharedOutQueryData;

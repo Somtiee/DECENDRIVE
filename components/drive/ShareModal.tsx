@@ -38,6 +38,7 @@ import {
 
 import { TrustBadgeRow } from "@/components/drive/trust";
 
+import type { ShareCompletedPayload } from "@/lib/drive/share-optimistic";
 import { FULL_SHARE_PERMISSION_FLAGS, wrapOwnerKeyForRecipient } from "@/lib/sui/share-crypto";
 
 
@@ -100,7 +101,7 @@ type ShareModalProps = {
 
   onOpenChange: (open: boolean) => void;
 
-  onShared?: () => void;
+  onShared?: (payload: ShareCompletedPayload) => void;
 
 };
 
@@ -576,12 +577,27 @@ export function ShareModal({ open, target, onOpenChange, onShared }: ShareModalP
                     id: toastId,
                     description: (
                       <span>
-                        Proof: <TxProofLink digest={result.digest} /> — recipient checks{" "}
-                        <strong>Received → Pending</strong>.
+                        Proof: <TxProofLink digest={result.digest} /> — opening{" "}
+                        <strong>Shared</strong>.
                       </span>
                     ),
                     duration: 8000,
                   });
+
+                  onShared?.({
+                    recipient: recipientAddress,
+                    txDigest: result.digest,
+                    createdAt,
+                    items: [
+                      {
+                        blobId: target.file.blobId,
+                        name: target.file.name,
+                        fileObjectId: target.file.decendriveFileId ?? target.file.objectId,
+                      },
+                    ],
+                  });
+                  onOpenChange(false);
+                  return;
 
                 } else {
 
@@ -673,7 +689,7 @@ export function ShareModal({ open, target, onOpenChange, onShared }: ShareModalP
 
                         {target.files.length} invitation(s) ·{" "}
 
-                        <TxProofLink digest={result.digest} />
+                        <TxProofLink digest={result.digest} /> — opening <strong>Shared</strong>
 
                       </span>
 
@@ -681,13 +697,20 @@ export function ShareModal({ open, target, onOpenChange, onShared }: ShareModalP
 
                   });
 
+                  onShared?.({
+                    recipient: recipientAddress,
+                    txDigest: result.digest,
+                    createdAt,
+                    items: target.files.map((file) => ({
+                      blobId: file.blobId,
+                      name: `${target.folder.name}/${file.name}`,
+                      fileObjectId: file.decendriveFileId ?? file.objectId,
+                    })),
+                  });
+                  onOpenChange(false);
+                  return;
+
                 }
-
-
-
-                onShared?.();
-
-                onOpenChange(false);
 
               } catch (error) {
 

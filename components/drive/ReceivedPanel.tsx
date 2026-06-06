@@ -103,9 +103,50 @@ function patchInviteAction(
   };
 }
 
+function emptyReceivedPage(page: number, pageSize: number) {
+  return {
+    items: [] as ShareInvitationView[],
+    pagination: { page, pageSize, total: 0, totalPages: 1 },
+  };
+}
+
+function applyInviteAction(
+  current: ReceivedQueryData | undefined,
+  action: "accepted" | "declined",
+  invite: ShareInvitationView,
+  pendingPage: number,
+  receivedPage: number,
+  pageSize: number,
+): ReceivedQueryData {
+  if (!current) {
+    if (action === "declined") {
+      return {
+        pending: emptyReceivedPage(pendingPage, pageSize),
+        received: emptyReceivedPage(receivedPage, pageSize),
+        stale: false,
+      };
+    }
+    const acceptedInvite: ShareInvitationView = {
+      ...invite,
+      status: "accepted",
+      acceptedAt: Date.now(),
+    };
+    return {
+      pending: emptyReceivedPage(pendingPage, pageSize),
+      received: {
+        items: [acceptedInvite],
+        pagination: { page: receivedPage, pageSize, total: 1, totalPages: 1 },
+      },
+      stale: false,
+    };
+  }
+  return patchInviteAction(current, action, invite);
+}
+
 type ReceivedPanelProps = {
   onPreview: (preview: PreviewTarget) => void;
   onAccepted?: () => void;
+  onInviteAccepted?: () => void;
   pendingPage: number;
   receivedPage: number;
   pageSize: number;
@@ -460,6 +501,7 @@ function Section({
 export function ReceivedPanel({
   onPreview,
   onAccepted,
+  onInviteAccepted,
   pendingPage,
   receivedPage,
   pageSize,
@@ -549,15 +591,24 @@ export function ReceivedPanel({
     const { bustCache = false, action, invite } = options;
 
     if (action && invite) {
-      queryClient.setQueryData<ReceivedQueryData>(queryKey, (current) => {
-        if (!current) {
-          return current;
-        }
-        return patchInviteAction(current, action, invite);
-      });
+      queryClient.setQueriesData<ReceivedQueryData>(
+        { queryKey: ["received-invitations", address], exact: false },
+        (current) =>
+          applyInviteAction(
+            current,
+            action,
+            invite,
+            pendingPage,
+            receivedPage,
+            pageSize,
+          ),
+      );
       const optimistic = queryClient.getQueryData<ReceivedQueryData>(queryKey);
       if (optimistic && panelCacheKey) {
         writeReceivedPanelCache(panelCacheKey, optimistic);
+      }
+      if (action === "accepted") {
+        onInviteAccepted?.();
       }
       onAccepted?.();
       bustCacheRef.current = true;

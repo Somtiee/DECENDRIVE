@@ -101,6 +101,12 @@ import { renewWalrusStorageBatch, toRenewalCandidate } from "@/lib/drive/storage
 import { buildDeleteBlobTransaction } from "@/lib/sui/walrus";
 
 import { clearPanelCache, readPanelCache, writePanelCache } from "@/lib/drive/panel-cache";
+import {
+  buildOptimisticSharedOutItems,
+  mergeOptimisticSharedOut,
+  type ShareCompletedPayload,
+  type SharedOutQueryShape,
+} from "@/lib/drive/share-optimistic";
 import { setActiveWallet } from "@/lib/drive/wallet-storage";
 
 import { shortenAddress } from "@/lib/utils";
@@ -1458,6 +1464,10 @@ export default function DashboardPage() {
 
               onAccepted={refreshAll}
 
+              onInviteAccepted={() => {
+                setReceivedPage(1);
+              }}
+
               pendingPage={pendingPage}
               receivedPage={receivedPage}
               pageSize={listPageSize}
@@ -1492,16 +1502,28 @@ export default function DashboardPage() {
 
             }}
 
-            onShared={() => {
-              refreshAll();
+            onShared={(payload: ShareCompletedPayload) => {
+              setShareTarget(null);
+              setCurrentView("shared");
+              setSharedOutPage(1);
+
               if (address) {
+                const optimisticItems = buildOptimisticSharedOutItems(payload);
+                queryClient.setQueryData<SharedOutQueryShape>(
+                  ["shared-out", address, 1, listPageSize],
+                  (current) => mergeOptimisticSharedOut(current, optimisticItems, listPageSize),
+                );
+                writePanelCache(`shared-out:${address}:1:${listPageSize}`, {
+                  items: mergeOptimisticSharedOut(undefined, optimisticItems, listPageSize).items,
+                  pagination: mergeOptimisticSharedOut(undefined, optimisticItems, listPageSize).pagination,
+                });
                 queryClient.setQueryData(["shared-out-bust", address], true);
-                clearPanelCache(`shared-out:${address}:1`);
+                clearPanelCache(`shared-out:${address}:1:${listPageSize}`);
               }
+
+              refreshAll();
               void queryClient.invalidateQueries({ queryKey: ["shared-out"] });
               void queryClient.invalidateQueries({ queryKey: ["shared-index"] });
-              void queryClient.invalidateQueries({ queryKey: ["received-index"] });
-              void queryClient.invalidateQueries({ queryKey: ["received-invitations"] });
             }}
 
           />
