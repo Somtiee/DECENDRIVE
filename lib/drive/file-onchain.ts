@@ -5,7 +5,7 @@ import {
   addLocalRevokedInvitation,
   removeLocalRevokedInvitation,
 } from "@/lib/drive/share-revoke";
-import { renameFile, saveFileMeta } from "@/lib/drive/file-metadata";
+import { mergeFileMeta, renameFile, saveFileMeta } from "@/lib/drive/file-metadata";
 import { captureTrashFolderSnapshot, clearTrashFolderSnapshot } from "@/lib/drive/trash";
 import {
   META_DISPLAY_NAME,
@@ -222,15 +222,17 @@ export function hydrateLocalFromOwnedMetadata(
     metadata?: Record<string, string>;
   }>,
 ) {
+  const entries: Record<string, { name: string; mimeType?: string; uploadedAt: number }> = {};
   for (const file of files) {
     const metadata = file.metadata ?? {};
     const displayName = metadata[META_DISPLAY_NAME]?.trim();
     if (displayName) {
-      saveFileMeta(file.blobId, {
+      entries[file.blobId] = {
         name: displayName,
         mimeType: metadata[META_MIME_TYPE] ?? file.mimeType,
         uploadedAt: Date.now(),
-      });
+      };
     }
   }
+  mergeFileMeta(entries);
 }

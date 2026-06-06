@@ -14,6 +14,7 @@ import {
   FileVideo,
   File as FileIcon,
   Folder,
+  FolderMinus,
   FolderPlus,
   Home,
   LayoutGrid,
@@ -54,6 +55,7 @@ import { useFileActions } from "@/components/drive/use-file-actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { paginateSlice, type PageSizeOption, type PaginationMeta } from "@/lib/drive/pagination";
+import { removeSavedReceived } from "@/lib/drive/saved-received";
 import { WALLET_CHANGED_EVENT } from "@/lib/drive/wallet-storage";
 import {
   addFileToFolder,
@@ -478,6 +480,13 @@ export function DriveExplorer({
     toast.success(folderId ? `Moved "${file.name}".` : `Moved "${file.name}" to My Drive.`);
   };
 
+  const removeReceivedFromDrive = (file: OwnedFileView) => {
+    removeSavedReceived(file.blobId);
+    removeFileFromFolder(file.blobId, null);
+    commit();
+    toast.success(`"${file.name}" removed from My Drive.`);
+  };
+
   const fileMenu = (file: OwnedFileView): MenuItem[] => {
     const items: MenuItem[] = [
       { label: "Open", icon: FileIcon, onClick: () => void openPreview(file) },
@@ -534,6 +543,15 @@ export function DriveExplorer({
           });
         }
       }
+    }
+
+    if (file.savedFromReceived && !isTrashView) {
+      items.push({
+        label: "Remove from My Drive",
+        icon: FolderMinus,
+        destructive: true,
+        onClick: () => removeReceivedFromDrive(file),
+      });
     }
 
     if (file.isOwner && isTrashView && onRestore) {

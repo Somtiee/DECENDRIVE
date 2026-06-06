@@ -7,12 +7,13 @@ import {
   Eye,
   FileIcon,
   FolderInput,
+  FolderMinus,
   Loader2,
   X,
 } from "lucide-react";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Pagination } from "@/components/drive/Pagination";
@@ -21,7 +22,12 @@ import { useFileActions } from "@/components/drive/use-file-actions";
 import type { PreviewTarget } from "@/components/drive/PreviewModal";
 import { recordReceived } from "@/lib/drive/activity";
 import type { PageSizeOption, PaginationMeta } from "@/lib/drive/pagination";
-import { addReceivedToMyDrive, isSavedReceived } from "@/lib/drive/saved-received";
+import {
+  addReceivedToMyDrive,
+  isSavedReceived,
+  removeSavedReceived,
+} from "@/lib/drive/saved-received";
+import { FILE_INDEX_EVENT } from "@/lib/drive/file-metadata";
 import { AccessRevokedDialog } from "@/components/drive/AccessRevokedDialog";
 import { acceptShareInvitation, declineShareInvitation } from "@/lib/sui/contract";
 import { shareAccessLabelFromSettings } from "@/lib/drive/share-access";
@@ -250,7 +256,14 @@ function InviteRow({
     }
     void download(file);
   };
-  const alreadySaved = isSavedReceived(invite.blobId);
+  const [savedToDrive, setSavedToDrive] = useState(() => isSavedReceived(invite.blobId));
+
+  useEffect(() => {
+    const syncSaved = () => setSavedToDrive(isSavedReceived(invite.blobId));
+    syncSaved();
+    window.addEventListener(FILE_INDEX_EVENT, syncSaved);
+    return () => window.removeEventListener(FILE_INDEX_EVENT, syncSaved);
+  }, [invite.blobId]);
 
   const accept = async () => {
     if (guardRevoked()) {
@@ -329,6 +342,15 @@ function InviteRow({
     }
   };
 
+  const removeFromMyDrive = () => {
+    if (!invite.blobId) {
+      return;
+    }
+    removeSavedReceived(invite.blobId);
+    toast.success(`"${invite.name}" removed from My Drive.`);
+    void onRefresh({ bustCache: true });
+  };
+
   return (
     <div
       className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
@@ -378,10 +400,16 @@ function InviteRow({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {invite.status === "accepted" && invite.keyWrapper && !alreadySaved && !invite.accessRevoked && (
+        {invite.status === "accepted" && invite.keyWrapper && !savedToDrive && !invite.accessRevoked && (
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={moveToMyDrive}>
             <FolderInput className="mr-2 h-4 w-4" />
             Move to My Drive
+          </Button>
+        )}
+        {invite.status === "accepted" && invite.keyWrapper && savedToDrive && !invite.accessRevoked && (
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={removeFromMyDrive}>
+            <FolderMinus className="mr-2 h-4 w-4" />
+            Remove from My Drive
           </Button>
         )}
         {invite.accessRevoked ? (

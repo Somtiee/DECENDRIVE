@@ -48,6 +48,22 @@ export function saveFileMeta(blobId: string, meta: StoredFileMeta) {
   writeJson(META_KEY, map);
 }
 
+/** Batch-write file metadata with a single index-changed event. */
+export function mergeFileMeta(entries: Record<string, StoredFileMeta>) {
+  const map = getFileMetaMap();
+  let changed = false;
+  for (const [blobId, meta] of Object.entries(entries)) {
+    if (!blobId) {
+      continue;
+    }
+    map[blobId] = meta;
+    changed = true;
+  }
+  if (changed) {
+    writeJson(META_KEY, map);
+  }
+}
+
 export function removeFileMeta(blobId: string) {
   const map = getFileMetaMap();
   if (map[blobId]) {
