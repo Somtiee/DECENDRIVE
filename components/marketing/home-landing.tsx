@@ -34,7 +34,7 @@ const WORKFLOW = [
 export function HomeLanding() {
   return (
     <div className="landing-grid-glow min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <header className="border-b border-border/60 bg-background">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
             <Image

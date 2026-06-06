@@ -7,7 +7,7 @@ import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
 
 export function TopNavbar() {
   return (
-    <header className="sticky top-0 z-40 flex min-h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background px-2 py-1.5 sm:min-h-16 sm:gap-2 sm:px-3 md:gap-3 md:px-6">
+    <header className="flex min-h-14 w-full items-center gap-1.5 border-b border-border/70 bg-background px-2 py-1.5 sm:min-h-16 sm:gap-2 sm:px-3 md:gap-3 md:px-6">
       <Link
         href="/"
         className="flex shrink-0 items-center gap-1.5 sm:gap-2"
