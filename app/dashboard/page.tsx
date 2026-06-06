@@ -1191,14 +1191,14 @@ export default function DashboardPage() {
           "Revoke targeted the share invitation instead of your file record. Refresh the Shared tab and try again.",
         );
       }
-      const toastId = toast.loading("Revoking access on Sui…");
+      const toastId = toast.loading("Confirming revoke on Sui…");
       try {
         await syncRevokeRecipientOnChain(
           chainExecutor(),
           fileId,
           item.invitationId,
         );
-        toast.success("Access revoked on-chain.", { id: toastId });
+        toast.dismiss(toastId);
         void queryClient.invalidateQueries({ queryKey: ["shared-out"] });
         void queryClient.invalidateQueries({ queryKey: ["received"] });
       } catch (error) {
@@ -1231,14 +1231,14 @@ export default function DashboardPage() {
           "Restore targeted the share invitation instead of your file record. Refresh the Shared tab and try again.",
         );
       }
-      const toastId = toast.loading("Restoring access on Sui…");
+      const toastId = toast.loading("Confirming restore on Sui…");
       try {
         await syncRestoreRecipientOnChain(
           chainExecutor(),
           fileId,
           item.invitationId,
         );
-        toast.success("Access restored on-chain.", { id: toastId });
+        toast.dismiss(toastId);
         void queryClient.invalidateQueries({ queryKey: ["shared-out"] });
         void queryClient.invalidateQueries({ queryKey: ["received"] });
       } catch (error) {

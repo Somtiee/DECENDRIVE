@@ -12,7 +12,11 @@ import { TxProofLink } from "@/components/drive/TxProofLink";
 import type { SharedOutItem } from "@/components/drive/types";
 import { TrustBadge } from "@/components/drive/trust";
 import { Pagination } from "@/components/drive/Pagination";
-import { isInvitationLocallyRevoked } from "@/lib/drive/share-revoke";
+import {
+  addLocalRevokedInvitation,
+  isInvitationLocallyRevoked,
+  removeLocalRevokedInvitation,
+} from "@/lib/drive/share-revoke";
 import {
   clearPanelCache,
   readNonEmptyPanelCache,
@@ -89,8 +93,10 @@ export function SharedOutPanel({
     queryClient.setQueryData(["shared-out-bust", sender], true);
   }, [sender, queryClient]);
 
+  const queryKey = ["shared-out", sender, page, pageSize] as const;
+
   const query = useQuery({
-    queryKey: ["shared-out", sender, page, pageSize],
+    queryKey,
     enabled: Boolean(sender),
     staleTime: 8_000,
     gcTime: 30 * 60_000,
@@ -125,7 +131,7 @@ export function SharedOutPanel({
     if (!sender) {
       return;
     }
-    queryClient.setQueryData<SharedOutQueryData>(["shared-out", sender, page], (current) => {
+    queryClient.setQueryData<SharedOutQueryData>(queryKey, (current) => {
       if (!current) {
         return current;
       }
@@ -171,19 +177,29 @@ export function SharedOutPanel({
       return;
     }
 
-    if (action === "revoke") {
+    const revoked = action === "revoke";
+    setConfirmTarget(null);
+
+    if (revoked) {
+      addLocalRevokedInvitation(item.invitationId);
       setRevokingId(item.invitationId);
     } else {
+      removeLocalRevokedInvitation(item.invitationId);
       setRestoringId(item.invitationId);
     }
+    patchItemRevoked(item, revoked);
+    toast.success(revoked ? "Access revoked." : "Access restored.");
 
     try {
       await handler(item);
-      patchItemRevoked(item, action === "revoke");
-      toast.success(action === "revoke" ? "Access revoked." : "Access restored.");
       requestRefresh();
-      setConfirmTarget(null);
     } catch (error) {
+      if (revoked) {
+        removeLocalRevokedInvitation(item.invitationId);
+      } else {
+        addLocalRevokedInvitation(item.invitationId);
+      }
+      patchItemRevoked(item, !revoked);
       const message = error instanceof Error ? error.message : `${action} failed.`;
       toast.error(message);
     } finally {
@@ -226,10 +242,10 @@ export function SharedOutPanel({
 
   return (
     <section className="space-y-4 rounded-xl border border-border/70 bg-card/70 p-4 md:p-6">
-      {query.isFetching && (
+      {query.isRefetching && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Updating from Sui…
+          Syncing with Sui…
         </p>
       )}
       {"warning" in (query.data ?? {}) && query.data?.warning ? (
@@ -251,10 +267,10 @@ export function SharedOutPanel({
           type="button"
           size="sm"
           variant="outline"
-          disabled={query.isFetching}
+          disabled={query.isRefetching}
           onClick={() => requestRefresh(true)}
         >
-          {query.isFetching ? (
+          {query.isRefetching ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
