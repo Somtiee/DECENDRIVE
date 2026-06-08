@@ -53,23 +53,9 @@ npm run dev
    - `NEXT_PUBLIC_DECENDRIVE_PACKAGE_ID`
 4. Deploy.
 
-## 2-Minute Hackathon Demo Script
-
-1. **Intro (0:00-0:15)**  
-   "DecenDrive is Google Drive UX with decentralized privacy and programmable access."
-2. **Wallet + Upload (0:15-0:45)**  
-   Connect wallet, drag file, upload with one click. Mention: "Users only hold SUI."
-3. **On-chain proof (0:45-1:05)**  
-   Show uploaded file instantly in My Drive. Open blob link + tx digest.
-4. **Programmable sharing (1:05-1:30)**  
-   Share internally to wallet with timed access, then revoke.
-5. **Social sharing (1:30-1:45)**  
-   Copy/share public view link to X/WhatsApp/LinkedIn/Email.
-6. **Access control flow (1:45-2:00)**  
-   Revoke access and show wallet-based controls are fully decentralized.
-
 ## Notes
 
 - Files are encrypted client-side before Walrus upload.
 - Mainnet-only architecture, production-oriented retries, and user-friendly errors.
 - Access model is programmable via Move contract.
+- All Sui RPC calls route through Tatum’s mainnet gateway (sui-mainnet.gateway.tatum.io) via the TATUM_API_KEY
